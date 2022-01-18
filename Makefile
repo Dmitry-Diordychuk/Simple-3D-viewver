@@ -6,11 +6,11 @@
 #    By: kdustin <kdustin@student.21-school.ru>     +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2021/12/05 19:44:51 by kdustin           #+#    #+#              #
-#    Updated: 2022/01/07 13:35:51 by kdustin          ###   ########.fr        #
+#    Updated: 2022/01/19 00:34:11 by kdustin          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-########################### Settings ###################################################################################
+# ######################### Settings ######################################### #
 
 NAME = scop
 
@@ -28,9 +28,13 @@ LIB_FLAGS = -L$(GLFW_LIB) -lglfw3 -framework Cocoa -framework OpenGL -framework 
 
 CFLAGS += $(LIB_FLAGS)
 
-PROJECT_INCLUDES += $(GLFW_INCLUDE)
+FT_CONTAINERS = ./ft_containers
 
-DEBUG_FLAGS = -g
+RT_MATH = ./rt_math
+
+PROJECT_INCLUDES += $(GLFW_INCLUDE) $(FT_CONTAINERS) $(RT_MATH)
+
+DEBUG_FLAGS =
 VALGRIND_ARGS = "config.scop"
 
 CEXTENSION = cpp
@@ -38,7 +42,7 @@ HEXTENSION = hpp
 
 GITIGNORE_DATA = $(NAME)\n.norm_script.sh\n*.o\n*.d\nobjs\ndpds\n.idea\n*.dSYM\n*.test*\ncmake-build-debug\n*.a\n.DS_Store
 
-########################################################################################################################
+# ############################################################################ #
 
 SRCS = $(shell find $(PROJECT_SOURCES) -name '*.$(CEXTENSION)')
 OBJS = $(patsubst $(PROJECT_SOURCES)/%,$(PROJECT_OBJECTS)/%, $(SRCS:%.$(CEXTENSION)=%.o))
@@ -63,7 +67,7 @@ $(PROJECT_OBJECTS)/%.o: $(PROJECT_SOURCES)/%.$(CEXTENSION)
 	fi
 	$(eval IS_COMPILING_START := 1)
 	@echo "${INFO}Compile $@...${BREAK_COLOR}"
-	@$(CC) $(INCLUDES) -c $(PROJECT_SOURCES)/$*.$(CEXTENSION) -o $(PROJECT_OBJECTS)/$*.o
+	$(CC) $(INCLUDES) $(DEBUG_FLAGS) -c $(PROJECT_SOURCES)/$*.$(CEXTENSION) -o $(PROJECT_OBJECTS)/$*.o
 
 $(PROJECT_OBJECTS):
 	@echo "${INFO}Create objects directory...${BREAK_COLOR}"
@@ -80,7 +84,7 @@ fclean: clean
 re: fclean all
 
 ########################### Debug ######################################################################################
-debug: FLAGS += $(DEBUG_FLAGS)
+debug: DEBUG_FLAGS += -g
 debug: re
 valgrind: debug
 	 @valgrind --leak-check=full --show-leak-kinds=all \
