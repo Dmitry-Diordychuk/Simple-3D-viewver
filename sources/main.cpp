@@ -3,56 +3,236 @@
 #include <GLFW/glfw3.h>
 #include <iostream>
 #include <cmath>
+#include <limits>
 #include "texture_loader.hpp"
 #include "rt_vector.hpp"
 #include "rt_matrix.hpp"
+#include "Vector.hpp"
+#include "Pair.hpp"
 
 rt::RTMatrix<float> translate(
-	rt::RTMatrix<float> identityMatrix,
+	rt::RTMatrix<float> matrix,
 	rt::RTVector<float> transVector
 ) {
-	identityMatrix[0][3] = transVector[0];
-	identityMatrix[1][3] = transVector[1];
-	identityMatrix[2][3] = transVector[2];
-	return identityMatrix;
+	rt::RTMatrix<float> identityMatrix(4, 4);
+	identityMatrix.toIdentity();
+
+	identityMatrix[0][3] = transVector['x'];
+	identityMatrix[1][3] = transVector['y'];
+	identityMatrix[2][3] = transVector['z'];
+
+	return matrix * identityMatrix;
 }
 
 rt::RTMatrix<float> rotate(
-	rt::RTMatrix<float> iMat,
+	rt::RTMatrix<float> matrix,
 	float rad,
 	rt::RTVector<float> rotAxis
 ) {
-	iMat[0][0] = cos(rad) + rotAxis['x'] * rotAxis['x'] * (1 * cos(rad));
+	rt::RTMatrix<float> iMat(4, 4);
+	iMat.toIdentity();
+
+	iMat[0][0] = cos(rad) + rotAxis['x'] * rotAxis['x'] * (1 - cos(rad));
 	iMat[1][0] = rotAxis['y'] * rotAxis['x'] * (1 - cos(rad)) + rotAxis['z'] * sin(rad);
 	iMat[2][0] = rotAxis['z'] * rotAxis['x'] * (1 - cos(rad)) - rotAxis['y'] * sin(rad);
-	iMat[3][0] = 0;
 
 	iMat[0][1] = rotAxis['x'] * rotAxis['y'] * (1 - cos(rad)) - rotAxis['z'] * sin(rad);
 	iMat[1][1] = cos(rad) + rotAxis['y'] * rotAxis['y'] * (1 - cos(rad));
 	iMat[2][1] = rotAxis['z'] * rotAxis['y'] * (1 - cos(rad)) + rotAxis['x'] * sin(rad);
-	iMat[3][1] = 0;
 
 	iMat[0][2] = rotAxis['x'] * rotAxis['z'] * (1 - cos(rad)) + rotAxis['y'] * sin(rad);
 	iMat[1][2] = rotAxis['y'] * rotAxis['z'] * (1 - cos(rad)) - rotAxis['x'] * sin(rad);
 	iMat[2][2] = cos(rad) + rotAxis['z'] * rotAxis['z'] * (1 - cos(rad));
-	iMat[3][2] = 0;
 
-	iMat[0][3] = 0;
-	iMat[1][3] = 0;
-	iMat[2][3] = 0;
-	iMat[3][3] = 1;
-
-	return iMat;
+	return matrix * iMat;
 }
 
 rt::RTMatrix<float> scale(
-	rt::RTMatrix<float> identityMatrix,
+	rt::RTMatrix<float> matrix,
 	rt::RTVector<float> scaleVector
 ) {
+	rt::RTMatrix<float> identityMatrix(4, 4);
+	identityMatrix.toIdentity();
+
 	identityMatrix[0][0] = scaleVector['x'];
 	identityMatrix[1][1] = scaleVector['y'];
 	identityMatrix[2][2] = scaleVector['z'];
-	return identityMatrix;
+	return matrix * identityMatrix;
+}
+
+float radians(float angle) {
+	return angle * M_PI / 180;
+}
+
+rt::RTMatrix<float> perspective(
+	float fov,
+	float aspect,
+	float near,
+	float far
+) {
+	rt::RTMatrix<float> perspectiveMatrix(4, 4);
+
+	float tan_half_angle = tan(fov / 2);
+
+	perspectiveMatrix[0][0] = 1 / (aspect * tan_half_angle);
+	perspectiveMatrix[1][1] = 1 / tan_half_angle;
+	perspectiveMatrix[2][2] = -(far + near) / (far - near);
+	perspectiveMatrix[2][3] = -(2 * far * near) / (far - near);
+	perspectiveMatrix[3][2] = -1;
+
+	return perspectiveMatrix;
+}
+
+int	ft_isdigit(int c)
+{
+	if (c >= '0' && c <= '9')
+		return (1);
+	return (0);
+}
+
+int	ft_atoi(const char *str)
+{
+	long long int	num;
+	int				minus;
+
+	minus = 1;
+	while (*str == '\f' || *str == '\v' || *str == ' '
+		|| *str == '\t' || *str == '\n' || *str == '\r')
+		str++;
+	if (*str == '-')
+	{
+		minus = -1;
+		str++;
+	}
+	else if (*str == '+')
+		str++;
+	num = 0;
+	while (*str != '\0')
+	{
+		if (*str < '0' || *str > '9')
+			break ;
+		num += *str - '0';
+		num *= 10;
+		str++;
+	}
+	return (num / 10 * minus);
+}
+
+float	ft_atof(const char *str)
+{
+	int		n;
+	float	d;
+	int		len;
+	int		sign;
+
+	sign = 1;
+	if (str[0] == '-' && str[1] == '0')
+		sign = -1;
+	d = 0;
+	len = 0;
+	n = ft_atoi(str);
+	while (ft_isdigit(*str) || *str == '-')
+		str++;
+	if (*str == '.')
+	{
+		str++;
+		while (ft_isdigit(str[len]))
+			len++;
+		d = ft_atoi(str);
+	}
+	while (len-- > 0)
+		d = d / 10;
+	if (n < 0)
+		d = d * -1;
+	return (((double)n + d) * sign);
+}
+
+bool isNumber(ft::String str) {
+	for (auto it = str.begin(); it != str.end(); it++) {
+		if (!ft_isdigit(*it)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool loadOBJ(
+	const char *path,
+	ft::Vector<float> &outVertices,
+	ft::Vector<int> &outVertexIndices,
+    rt::RTVector<float> &center
+) {
+	std::ifstream file;
+	file.open(path, std::ios::in | std::ios::binary);
+
+	if (!file.is_open()) {
+		return false;
+	}
+
+    rt::RTVector<float> min(
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max(),
+            std::numeric_limits<float>::max()
+    );
+    rt::RTVector<float> max(
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::min(),
+            std::numeric_limits<float>::min()
+    );
+
+    ft::String tempStr;
+    file >> tempStr;
+    float red = 0.0f;
+    float green = 0.0f;
+    float blue = 0.0f;
+    size_t counter = 0;
+	while (file) {
+		if (tempStr == "v") {
+			file >> tempStr;
+            float x = ft_atof(tempStr.c_str());
+            outVertices.push_back(x);
+            min['x'] = x < min['x'] ? x : min['x'];
+            max['x'] = x > max['x'] ? x : max['x'];
+			file >> tempStr;
+            float y = ft_atof(tempStr.c_str());
+            outVertices.push_back(y);
+            min['y'] = y < min['y'] ? y : min['y'];
+            max['y'] = y > max['y'] ? y : max['y'];
+			file >> tempStr;
+            float z = ft_atof(tempStr.c_str());
+            outVertices.push_back(z);
+            min['z'] = z < min['z'] ? z : min['z'];
+            max['z'] = z > max['z'] ? z : max['z'];
+            file >> tempStr;
+
+            red = sin(counter) / 2.0f + 0.5f;
+            green = cos(counter) / 2.0f + 0.5f;
+            blue = tan(counter) / 2.0f + 0.5f;
+            outVertices.push_back(red);
+            outVertices.push_back(green);
+            outVertices.push_back(blue);
+            counter++;
+		} else if (tempStr == "f") {
+            ft::Vector<float> tempVector;
+			while (file >> tempStr && isNumber(tempStr)) {
+                tempVector.push_back(ft_atoi(tempStr.c_str()) - 1);
+                if (tempVector.size() == 3) {
+                    outVertexIndices.push_back(tempVector[0]);
+                    outVertexIndices.push_back(tempVector[1]);
+                    outVertexIndices.push_back(tempVector[2]);
+                    tempVector.erase(tempVector.begin() + 1);
+                }
+			}
+		} else {
+            file >> tempStr;
+        }
+	}
+    center = rt::RTVector(
+            (max['x'] - min['x']) / 2.0f,
+            (max['y'] - min['y']) / 2.0f,
+            (max['z'] - min['z']) / 2.0f
+    );
+	return true;
 }
 
 void error_callback(int error, const char* description)
@@ -115,13 +295,15 @@ int main() {
 		"layout (location = 0) in vec3 aPos;\n"
 		"layout (location = 1) in vec3 aColor;\n"
 		"layout (location = 2) in vec2 aTexCoord;\n"
-		"out vec3 ourColor;\n"
+		"flat out vec4 ourColor;\n"
 		"out vec2 TexCoord;\n"
-		"uniform mat4 transform;\n"
+		"uniform mat4 model;\n"
+		"uniform mat4 view;\n"
+		"uniform mat4 projection;\n"
 		"void main()\n"
 		"{\n"
-		"   gl_Position = transform * vec4(aPos, 1.0);\n"
-		"	ourColor = aColor;\n"
+		"   gl_Position = projection * view * model * vec4(aPos, 1.0);\n"
+		"	ourColor = vec4(aColor, 1.0);\n"
 		"	TexCoord = aTexCoord;\n"
 		"}\0";
 
@@ -144,12 +326,12 @@ int main() {
 
 	const char *fragmentShaderSource = "#version 330 core\n"
 		"out vec4 FragColor;\n"
-		"in vec3 ourColor;\n"
+		"flat in vec4 ourColor;\n"
 		"in vec2 TexCoord;\n"
 		"uniform sampler2D ourTexture;\n"
 		"void main()\n"
 		"{\n"
-		"   FragColor = texture(ourTexture, TexCoord);\n"
+		"   FragColor = ourColor + texture(ourTexture, TexCoord);\n" //
 		"}\0";
 
 	unsigned int fragmentShader;
@@ -187,24 +369,24 @@ int main() {
 
 ///////////////////////////Texture//////////////////////////////////////////////
 
-	Scop::TextureLoader textLoader("water.bmp");
-	unsigned char* image = textLoader.getPixelArray();
-	size_t width = textLoader.getWidth();
-	size_t height = textLoader.getHeight();
+	// Scop::TextureLoader textLoader("water.bmp");
+	// unsigned char* image = textLoader.getPixelArray();
+	// size_t width = textLoader.getWidth();
+	// size_t height = textLoader.getHeight();
 
-////// 					Check texture 					/////
-	// const size_t width = 64;
-	// const size_t height = 64;
-	// GLubyte image[width][height][3];
-	// int i, j, c;
-	// for (i = 0; i < width; i++) {
-	// 	for (j = 0; j < height; j++) {
-	// 		c = ((((i&0x8)==0)^((j&0x8)==0)))*255;
-	// 		image[i][j][0] = (GLubyte) c;
-	// 		image[i][j][1] = (GLubyte) c;
-	// 		image[i][j][2] = (GLubyte) c;
-	// 	}
-	// }
+//// 					Check texture 					/////
+	const size_t width = 64;
+	const size_t height = 64;
+	GLubyte image[width][height][3];
+	int i, j, c;
+	for (i = 0; i < width; i++) {
+		for (j = 0; j < height; j++) {
+			c = ((((i&0x8)==0)^((j&0x8)==0)))*255;
+			image[i][j][0] = (GLubyte) c;
+			image[i][j][1] = (GLubyte) c;
+			image[i][j][2] = (GLubyte) c;
+		}
+	}
 
 	unsigned int texture;
 	glGenTextures(1, & texture);
@@ -223,66 +405,87 @@ int main() {
 		return -1;
 	}
 
+//////////////////////////Load obj///////////////////////////////////////////////
+
+	ft::Vector<float> vertices;
+	ft::Vector<int> indices;
+    rt::RTVector<float> center;
+
+	loadOBJ("models/42.obj", vertices, indices, center);
+
+//	for (auto it = vertices.begin(); it != vertices.end(); it++) {
+//		std::cout << *it << std::endl;
+//	}
+//	for (auto it = indices.begin(); it != indices.end(); it++) {
+//        std::cout << *it << ' ';
+//	}
+//    std::cout << std::endl;
+
 ////////////////////////////////////////////////////////////////////////////////
 
-	float vertices[] = {
-		-0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 0.0f,		0.0f, 0.0f,
-		0.5f, -0.5f, 0.0f,		0.0f, 0.0f, 0.0f,		1.0f, 0.0f,
-		0.0f, 0.5f, 0.0f,		0.0f, 0.0f, 0.0f,		0.5f, 1.0f
-	};
+	// float vertices[] = {
+	// 	-0.5f, -0.5f, 0.28867f,	0.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+	// 	0.5f, -0.5f, 0.28867f,	0.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+	// 	0.0f, 0.5f, 0.0f,		0.0f, 0.0f, 0.0f,		0.5f, 1.0f,
+
+	// 	0.5f, -0.5f, 0.28867f,	0.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+	// 	0.0f, -0.5f, -0.577f,	0.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+	// 	0.0f, 0.5f, 0.0f,		0.0f, 0.0f, 0.0f,		0.5f, 1.0f,
+
+	// 	0.0f, -0.5f, -0.577f,	0.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+	// 	-0.5f, -0.5f, 0.28867f,	0.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+	// 	0.0f, 0.5f, 0.0f,		0.0f, 0.0f, 0.0f,		0.5f, 1.0f,
+
+	// 	-0.5f, -0.5f, 0.28867f,	0.0f, 0.0f, 0.0f,		0.0f, 0.0f,
+	// 	0.5f, -0.5f, 0.28867f,	0.0f, 0.0f, 0.0f,		1.0f, 0.0f,
+	// 	0.0f, -0.5f, -0.577f,	0.0f, 0.0f, 0.0f,		0.5f, 1.0f,
+	// };
 
 	unsigned int VBO;
 	glGenBuffers(1, &VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), &vertices[0], GL_STATIC_DRAW);
 
 	unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
 	glBindVertexArray(VAO);
 
-	unsigned int indices[] = {
-		0, 1, 2
-	};
+	// unsigned int indices[] = {
+	// 	0, 1, 2,
+	// 	3, 4, 5,
+	// 	6, 7, 8,
+	// 	9, 10, 11
+	// };
 
 	unsigned int EBO;
 	glGenBuffers(1, &EBO);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices[0], GL_STATIC_DRAW);
 
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
 	glEnableVertexAttribArray(0);
 
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
-	glEnableVertexAttribArray(1);
+	 glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+	 glEnableVertexAttribArray(1);
 
-	glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
-	glEnableVertexAttribArray(2);
+	// glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+	// glEnableVertexAttribArray(2);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
-	glUseProgram(shaderProgram);
-	glUniform1i(glGetUniformLocation(shaderProgram, "texture"), 0);
+	// glUseProgram(shaderProgram);
+	// glUniform1i(glGetUniformLocation(shaderProgram, "texture"), 0);
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 /////////////// Transformation matrix //////////////////////////////////////////
-	rt::RTMatrix<float> trans(4, 4);
-
-	trans.toIdentity();
-	trans = translate(trans, rt::RTVector<float>(1.0f, 0.0f, 0.0f));
-	// vec = trans * vec;
-	// std::cout << vec['x'] << vec['y'] << vec['z'] << std::endl;
-
-	//trans.toIdentity();
-	//trans = rotate(trans, 90.0f, rt::RTVector<float>(0.0f, 0.0f, 1.0f));
-	//trans = scale(trans, rt::RTVector<float>(0.5f, 0.5f, 0.5f));
-
-	unsigned int transformLoc = glGetUniformLocation(shaderProgram, "transform");
-	glUniformMatrix4fv(transformLoc, 1, GL_FALSE, trans.getData());
+	float angle = 0;
+	glEnable(GL_DEPTH_TEST);
 
 	while(!glfwWindowShouldClose(window))
 	{
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		// Input
 		processInput(window);
 
@@ -290,12 +493,46 @@ int main() {
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, texture);
+		// glActiveTexture(GL_TEXTURE0);
+		// glBindTexture(GL_TEXTURE_2D, texture);
 
 		glUseProgram(shaderProgram);
+
+///////////////////// Transformation ///////////////////////////////////////////////////////////////////////////////////
+		// Model matrix
+		rt::RTMatrix<float> model(4, 4);
+		model.toIdentity();
+        model = translate(model, rt::RTVector<float>(
+                -center['x'],
+                -center['y'],
+                -center['z']
+        ));
+		model = scale(model, rt::RTVector<float>(1.0f, 1.0f, 1.0f));
+		model = rotate(model, radians(angle), rt::RTVector<float>(0.0f, 1.0f, 0.0f));
+		angle += 1;
+
+		//glUseProgram(shaderProgram);
+		unsigned int modelLoc = glGetUniformLocation(shaderProgram, "model");
+		glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (model).getData());
+
+		// View matrix
+		rt::RTMatrix<float> view(4, 4);
+		view.toIdentity();
+		view = translate(view, rt::RTVector<float>(0.0f, 0.0f, -10.0f));
+
+		//glUseProgram(shaderProgram);
+		unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
+		glUniformMatrix4fv(viewLoc, 1, GL_TRUE, (view).getData());
+
+		rt::RTMatrix<float> projection = perspective(radians(45), 800.0f / 600.0f, 0.1f, 100.0f);
+
+		//glUseProgram(shaderProgram);
+		unsigned int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+		glUniformMatrix4fv(projectionLoc, 1, GL_TRUE, (projection).getData());
+
+		///////////////////////////////////////////////////////////////////////////////
 		glBindVertexArray(VAO);
-		glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 		//glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		// check call events and swap

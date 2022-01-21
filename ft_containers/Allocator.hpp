@@ -37,7 +37,7 @@ namespace ft {
 
 		~Allocator() throw() {};
 
-		Allocator& operator=(const Allocator&);
+		Allocator& operator=(const Allocator&) = default;
 
 		size_type max_size() const throw() {
 			return (std::numeric_limits<size_type>::max() / sizeof(T));

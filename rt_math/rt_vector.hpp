@@ -63,6 +63,10 @@ namespace rt
 			return (*this);
 		};
 
+        T* getData() {
+            return data;
+        }
+
 		size_t getDims() const {
 			return this->dims;
 		};
@@ -183,6 +187,9 @@ namespace rt
 		friend RTVector<U> operator/ (const U &lhs, const RTVector<U> &rhs);
 		template <class U>
 		friend RTVector<U> operator/ (const RTVector<U> &rhs, const U &lhs);
+
+		template <class U>
+		friend std::ostream& operator<<(std::ostream& os, const RTVector<U>& vec);
 	};
 
 	template <class U>
@@ -220,6 +227,16 @@ namespace rt
 			result[i] = rhs.data[i] / lhs;
 		return (RTVector<U>(result, rhs.dims));
 	};
+
+	template <class U>
+	std::ostream& operator<<(std::ostream& os, const RTVector<U>& vec) {
+		os << "[ ";
+		for (size_t i = 0; i < vec.getDims(); i++) {
+			os << vec[i] << " ";
+		}
+		os << "]";
+		return os;
+	}
 
 } // namespace rt
 

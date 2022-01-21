@@ -6,7 +6,7 @@
 #    By: kdustin <kdustin@student.21-school.ru>     +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2021/12/05 19:44:51 by kdustin           #+#    #+#              #
-#    Updated: 2022/01/19 00:34:11 by kdustin          ###   ########.fr        #
+#    Updated: 2022/01/20 17:12:14 by kdustin          ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,7 +20,8 @@ PROJECT_SOURCES = ./sources
 PROJECT_INCLUDES = ./includes
 PROJECT_OBJECTS = ./objects
 
-CFLAGS = -Wall -Wextra -Werror -std=c++2a
+CPP = -std=c++2a
+CFLAGS = -Wall -Wextra -Werror ${CPP}
 
 GLFW_INCLUDE = ./glfw3/include
 GLFW_LIB = ./glfw3/build/src
@@ -67,7 +68,7 @@ $(PROJECT_OBJECTS)/%.o: $(PROJECT_SOURCES)/%.$(CEXTENSION)
 	fi
 	$(eval IS_COMPILING_START := 1)
 	@echo "${INFO}Compile $@...${BREAK_COLOR}"
-	$(CC) $(INCLUDES) $(DEBUG_FLAGS) -c $(PROJECT_SOURCES)/$*.$(CEXTENSION) -o $(PROJECT_OBJECTS)/$*.o
+	$(CC) ${CPP} $(INCLUDES) $(DEBUG_FLAGS) -c $(PROJECT_SOURCES)/$*.$(CEXTENSION) -o $(PROJECT_OBJECTS)/$*.o
 
 $(PROJECT_OBJECTS):
 	@echo "${INFO}Create objects directory...${BREAK_COLOR}"

@@ -184,6 +184,9 @@ namespace rt
 		template <class U>
 		friend rt::RTVector<U> operator* (const RTMatrix<U>& lhs, const rt::RTVector<U>& rhs);
 
+		template <class U>
+		friend std::ostream& operator<<(std::ostream& os, const RTMatrix<U>& dt);
+
 	private:
 		void swapRow(size_t i_1, size_t i_2) {
 			T *temp = new T[this->cols];
@@ -306,15 +309,22 @@ namespace rt
 
 	template <class U>
 	RTMatrix<U> operator* (const RTMatrix<U>& lhs, const RTMatrix<U>& rhs) {
-		if (lhs.rows != rhs.rows || lhs.cols != rhs.cols)
+		if (lhs.cols != rhs.rows)
 			throw std::runtime_error("Matrixies are not the same size!");
 		size_t rows = lhs.rows;
 		size_t cols = lhs.cols;
 		size_t n = lhs.n;
-		U *data = new U[n];
-		for (size_t i = 0; i < n; ++i)
-			data[i] = lhs.data[i] * rhs.data[i];
-		return RTMatrix<U>(rows, cols, n, data);
+		//U *data = new U[n];
+		rt::RTMatrix<U> result(lhs.rows, rhs.cols);
+		for (size_t j = 0; j < lhs.rows; ++j) {
+			for (size_t i = 0; i < rhs.cols; ++i) {
+				result[i][j] = 0;
+				for (size_t k = 0; k < lhs.rows; ++k) {
+					result[i][j] += lhs[k][j] * rhs[i][k];
+				}
+			}
+		}
+		return result;
 	};
 	template <class U>
 	RTMatrix<U> operator* (const U& lhs, const RTMatrix<U>& rhs) {
@@ -362,6 +372,18 @@ namespace rt
 		}
 		return rt::RTVector<U>(result, lhs.rows);
 	};
+
+	template <class U>
+	std::ostream& operator<<(std::ostream& os, const RTMatrix<U>& matrix) {
+		for (size_t i = 0; i < matrix.rows; i++) {
+			os << "[ ";
+			for (size_t j = 0; j < matrix.cols; j++) {
+				os << matrix[i][j] << " ";
+			}
+			os << "]\n";
+		}
+		return os;
+	}
 }
 
 #endif // !RT_MATRIX_HPP

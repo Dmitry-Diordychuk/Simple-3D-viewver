@@ -231,7 +231,8 @@ namespace ft
 
 		size_type	strncmp(const charT *s1, const charT *s2, size_type n1, size_type n2) const
 		{
-			for (size_type i = 0; i < n1 && i < n2; ++i)
+			int n = n1 > n2 ? n1 : n2;
+			for (size_type i = 0; i < n; ++i)
 				if (s1[i] != s2[i])
 					return (s1[i] - s2[i]);
 			return (0);
